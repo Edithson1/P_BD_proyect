@@ -53,6 +53,3 @@ def actualizar_registro():
         return jsonify({"error": str(e)})
     finally:
         connection.close()
-
-if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=5000)

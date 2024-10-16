@@ -1,3 +1,2 @@
 Flask==2.3.2
-flask_sqlalchemy 
-gunicorn
+flask_mysql

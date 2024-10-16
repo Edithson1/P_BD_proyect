@@ -1,48 +1,44 @@
 from flask import Flask, jsonify, request
-from flask_sqlalchemy import SQLAlchemy
+from flask_mysql import MySQL
 
 # Inicializar la aplicación Flask
 app = Flask(__name__)
 
 # Configuración de la base de datos MySQL
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://all_user:8765@autorack.proxy.rlwy.net:56092/bd_project'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desactivar la modificación de seguimiento
+app.config['MYSQL_HOST'] = 'autorack.proxy.rlwy.net'
+app.config['MYSQL_PORT'] = 56092
+app.config['MYSQL_USER'] = 'all_user'
+app.config['MYSQL_PASSWORD'] = '8765'
+app.config['MYSQL_DB'] = 'bd_project'
 
-# Inicializar la extensión SQLAlchemy
-db = SQLAlchemy(app)
-
-# Definir la tabla 'historial' usando SQLAlchemy ORM
-class Historial(db.Model):
-    __tablename__ = 'historial'
-
-    id_historial = db.Column(db.Integer, primary_key=True)
-    time_insert = db.Column(db.String(255))
-    nivel = db.Column(db.Integer)
-    orientation = db.Column(db.String(255))
-    posicion_x = db.Column(db.Float)
-    posicion_y = db.Column(db.Float)
+# Inicializar la extensión MySQL
+mysql = MySQL(app)
 
 # Función para obtener movimientos permitidos desde la base de datos
 def obtener_informacion_movimientos():
-    movimiento = Historial.query.order_by(Historial.id_historial.desc()).first()
-    if movimiento:
-        return {
-            "id_historial": movimiento.id_historial,
-            "time_insert": movimiento.time_insert,
-            "nivel": movimiento.nivel,
-            "orientation": movimiento.orientation,
-            "posicion_x": movimiento.posicion_x,
-            "posicion_y": movimiento.posicion_y
-        }
+    with app.app_context():  # Establecer el contexto de la aplicación
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            SELECT id_historial, decision, nivel, posicion_x, posicion_y
+            FROM historial
+            ORDER BY id_historial DESC
+            LIMIT 1
+        ''')
+        movimientos_permitidos = cursor.fetchall()  # Devuelve una lista de tuplas
+        cursor.close()
+
+    if movimientos_permitidos:
+        return movimientos_permitidos[0]
     return None
 
 # Función para actualizar el registro en la base de datos
 def actualizar_registro(voto, historial_id, nivel, x, y):
-    # Aquí puedes usar el modelo o un procedimiento almacenado como prefieras
-    # Para este ejemplo, supongamos que solo registras el voto en una nueva entrada
-    nuevo_voto = Historial(id_historial=historial_id, nivel=nivel, posicion_x=x, posicion_y=y)
-    db.session.add(nuevo_voto)
-    db.session.commit()
+    with app.app_context():  # Establecer el contexto de la aplicación
+        cursor = mysql.connection.cursor()
+        # Llamar a un procedimiento almacenado
+        cursor.callproc('registrar_voto', (voto, historial_id, nivel, x, y))
+        mysql.connection.commit()
+        cursor.close()
 
 # Rutas de la API
 @app.route('/obtener_movimientos', methods=['GET'])
@@ -66,4 +62,4 @@ def actualizar_registro_endpoint():
 
 @app.route('/')
 def hello_world():
-    return 'Hello from Flask with SQLAlchemyssssssssssssssssss!'
+    return 'Hello from Flask with MySQL!'

@@ -67,3 +67,6 @@ def actualizar_registro_endpoint():
 @app.route('/')
 def hello_world():
     return 'Hello from Flask with SQLAlchemy!'
+
+if __name__ == '__main__':
+    app.run(debug=True)
